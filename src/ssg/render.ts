@@ -60,8 +60,9 @@ export function renderReportBody(markdown: string): RenderedReportBody {
 export function plainTextExcerpt(markdown: string, maxChars: number = 300): string {
   // Strip fenced code blocks
   let text = markdown.replace(/```[\s\S]*?```/g, '');
-  // Strip inline code
-  text = text.replace(/`[^`]*`/g, '');
+  // Preserve inline-code content — drop the backticks but keep the text so
+  // code identifiers (function names, flags, etc.) stay searchable.
+  text = text.replace(/`([^`]*)`/g, '$1');
   // Strip markdown images
   text = text.replace(/!\[.*?\]\(.*?\)/g, '');
   // Replace links with just text

@@ -380,7 +380,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const parsedIndex = Fuse.parseIndex(indexJson);
         fuse = new Fuse(searchDocs, {
-          keys: ['title', 'excerpt', 'pipelineLabel'],
+          keys: [
+            { name: 'title', weight: 0.5 },
+            { name: 'excerpt', weight: 0.3 },
+            { name: 'pipelineLabel', weight: 0.2 },
+          ],
           includeMatches: true,
           threshold: 0.4
         }, parsedIndex);

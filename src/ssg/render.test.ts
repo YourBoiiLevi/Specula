@@ -33,7 +33,7 @@ describe('plainTextExcerpt', () => {
   it('strips code blocks, links, headings', () => {
     const md = `# Title\n\nSome text with a [link](https://example.com) and \`inline code\`.\n\n\`\`\`html\n<div></div>\n\`\`\`\n\n![image](img.png) More text.`;
     const excerpt = plainTextExcerpt(md);
-    expect(excerpt).toBe('Title Some text with a link and . More text.');
+    expect(excerpt).toBe('Title Some text with a link and inline code. More text.');
   });
 
   it('truncates with ellipsis', () => {

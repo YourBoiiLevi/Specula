@@ -35,6 +35,7 @@ export function buildAtomFeed(
   xml += `  <updated>${escapeXml(updated)}</updated>\n`;
   xml += `  <link rel="self" href="${escapeXml(baseUrl)}/feed.xml"/>\n`;
   xml += `  <link rel="alternate" type="text/html" href="${escapeXml(baseUrl)}/"/>\n`;
+  xml += `  <author><name>${escapeXml(config.feedTitle)}</name></author>\n`;
   
   for (const report of limited) {
     const reportUrl = `${baseUrl}/reports/${report.id}.html`;
