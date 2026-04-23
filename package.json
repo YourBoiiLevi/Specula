@@ -12,6 +12,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "config-ui": "node --import tsx/esm scripts/run-config-ui.ts",
     "test:watch": "vitest",
     "test:analyzer": "node --import tsx/esm scripts/test-analyzer.ts",
     "ssg": "node --import tsx/esm scripts/run-ssg.ts",
