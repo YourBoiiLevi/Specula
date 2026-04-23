@@ -1,0 +1,39 @@
+{
+  "intervalHours": 1,
+  "primaryModel": "gemini-3-flash-preview",
+  "fallbackModel": "gemini-3.1-flash-lite-preview",
+  "thinkingLevel": "low",
+  "maxItemsPerRun": 100,
+  "dedupWindowHours": 48,
+  "siteRepoPath": "./specula-site",
+  "githubPagesUrl": "https://example.github.io/specula",
+  "feedTitle": "Specula",
+  "feedDescription": "AI-synthesized intelligence briefings from curated feeds",
+  "configUiPort": 3001,
+  "pipelines": [
+    {
+      "id": "placeholder-one",
+      "label": "Placeholder Pipeline One",
+      "description": "Replace this with what this pipeline actually monitors. This text is fed to the AI as context.",
+      "feedGroups": [
+        {
+          "id": "example-feed",
+          "label": "Example Feed",
+          "url": "https://example.com/feed.xml"
+        }
+      ]
+    },
+    {
+      "id": "placeholder-two",
+      "label": "Placeholder Pipeline Two",
+      "description": "Another placeholder. Configure real feed URLs through the Config UI on port 3001.",
+      "feedGroups": [
+        {
+          "id": "example-rsshub",
+          "label": "Example RSSHub Route",
+          "url": "http://localhost:1200/example/route"
+        }
+      ]
+    }
+  ]
+}
