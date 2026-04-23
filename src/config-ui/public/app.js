@@ -96,7 +96,12 @@
       input.dataset.key = f.key;
       input.addEventListener('input', () => {
         let val = input.value;
-        if (f.type === 'number') val = Number(val);
+        if (f.type === 'number') {
+          // Empty input must not silently become 0 — let the value go through
+          // as empty so validate()/server-side validation flags it. Blank ≠
+          // zero.
+          val = input.value === '' ? '' : Number(input.value);
+        }
         currentConfig[f.key] = val;
         validate();
       });
@@ -116,11 +121,25 @@
     
     const userDiv = document.createElement('div');
     userDiv.className = 'form-group';
-    userDiv.innerHTML = `<label>Username</label><input type="text" id="auth-user" value="${currentConfig.configUiAuth?.user || ''}">`;
-    
+    const userLabel = document.createElement('label');
+    userLabel.textContent = 'Username';
+    const userInput = document.createElement('input');
+    userInput.type = 'text';
+    userInput.id = 'auth-user';
+    userInput.value = currentConfig.configUiAuth?.user || '';
+    userDiv.appendChild(userLabel);
+    userDiv.appendChild(userInput);
+
     const passDiv = document.createElement('div');
     passDiv.className = 'form-group';
-    passDiv.innerHTML = `<label>Password</label><input type="password" id="auth-pass" value="${currentConfig.configUiAuth?.pass || ''}">`;
+    const passLabel = document.createElement('label');
+    passLabel.textContent = 'Password';
+    const passInput = document.createElement('input');
+    passInput.type = 'password';
+    passInput.id = 'auth-pass';
+    passInput.value = currentConfig.configUiAuth?.pass || '';
+    passDiv.appendChild(passLabel);
+    passDiv.appendChild(passInput);
     
     const disableBtn = document.createElement('button');
     disableBtn.textContent = 'Disable Auth';
@@ -165,7 +184,10 @@
       
       const header = document.createElement('div');
       header.className = 'pipeline-header';
-      header.innerHTML = `<span class="pipeline-id">${p.id}</span>`;
+      const pidSpan = document.createElement('span');
+      pidSpan.className = 'pipeline-id';
+      pidSpan.textContent = p.id;
+      header.appendChild(pidSpan);
       
       const delBtn = document.createElement('button');
       delBtn.textContent = 'Delete Pipeline';
@@ -266,6 +288,15 @@
     return div;
   }
 
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function validate() {
     const errors = [];
     
@@ -286,7 +317,7 @@
     });
 
     if (errors.length > 0) {
-      els.validationBanner.innerHTML = errors.join('<br>');
+      els.validationBanner.innerHTML = errors.map(escapeHtml).join('<br>');
       els.validationBanner.className = 'invalid';
       els.saveBtn.disabled = true;
     } else {
@@ -317,7 +348,10 @@
           }
         }, 3000);
       } else {
-        const errs = data.errors.map(e => `${e.path ? e.path + ': ' : ''}${e.message}`).join('<br>');
+        const errs = data.errors
+          .map(e => `${e.path ? e.path + ': ' : ''}${e.message}`)
+          .map(escapeHtml)
+          .join('<br>');
         els.validationBanner.innerHTML = errs;
         els.validationBanner.className = 'invalid';
       }
@@ -343,39 +377,75 @@
 
   function renderStatusTable(pipelines) {
     if (!pipelines || pipelines.length === 0) {
-      els.statusTable.innerHTML = '<p>No status available.</p>';
+      els.statusTable.textContent = '';
+      const p = document.createElement('p');
+      p.textContent = 'No status available.';
+      els.statusTable.appendChild(p);
       return;
     }
 
-    let html = `<table>
-      <thead>
-        <tr>
-          <th>Pipeline</th>
-          <th>Status</th>
-          <th>Last Run</th>
-          <th>Items</th>
-          <th>Model</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>`;
-      
-    pipelines.forEach(p => {
-      const timeStr = p.lastRunAt ? new Date(p.lastRunAt).toLocaleString() : 'Never';
-      const errHtml = p.lastError ? `<span class="error-text" title="${p.lastError.replace(/"/g, '&quot;')}">${p.lastError.substring(0, 120)}${p.lastError.length > 120 ? '...' : ''}</span>` : '';
-      
-      html += `<tr>
-        <td><strong>${p.pipelineId}</strong></td>
-        <td><span class="status-chip status-${p.lastRunStatus}">${p.lastRunStatus}</span>${errHtml}</td>
-        <td>${timeStr}</td>
-        <td>${p.lastItemCount !== undefined ? p.lastItemCount : '-'}</td>
-        <td>${p.lastModelUsed || '-'}</td>
-        <td><button type="button" onclick="window.runPipeline('${p.pipelineId}')">Run now</button></td>
-      </tr>`;
+    // Build the table via the DOM API so user-controlled values (pipelineId,
+    // lastError, lastModelUsed, etc.) can't break out into script/html tags.
+    els.statusTable.textContent = '';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    ['Pipeline', 'Status', 'Last Run', 'Items', 'Model', 'Action'].forEach(label => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      headRow.appendChild(th);
     });
-    
-    html += `</tbody></table>`;
-    els.statusTable.innerHTML = html;
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    pipelines.forEach(p => {
+      const tr = document.createElement('tr');
+
+      const pidCell = document.createElement('td');
+      const strong = document.createElement('strong');
+      strong.textContent = p.pipelineId;
+      pidCell.appendChild(strong);
+      tr.appendChild(pidCell);
+
+      const statusCell = document.createElement('td');
+      const chip = document.createElement('span');
+      chip.className = 'status-chip status-' + String(p.lastRunStatus || 'idle').replace(/[^a-z]/gi, '');
+      chip.textContent = p.lastRunStatus || 'idle';
+      statusCell.appendChild(chip);
+      if (p.lastError) {
+        const errSpan = document.createElement('span');
+        errSpan.className = 'error-text';
+        errSpan.title = p.lastError;
+        errSpan.textContent = ' ' + (p.lastError.length > 120 ? p.lastError.substring(0, 120) + '…' : p.lastError);
+        statusCell.appendChild(errSpan);
+      }
+      tr.appendChild(statusCell);
+
+      const timeCell = document.createElement('td');
+      timeCell.textContent = p.lastRunAt ? new Date(p.lastRunAt).toLocaleString() : 'Never';
+      tr.appendChild(timeCell);
+
+      const itemsCell = document.createElement('td');
+      itemsCell.textContent = p.lastItemCount !== undefined ? String(p.lastItemCount) : '-';
+      tr.appendChild(itemsCell);
+
+      const modelCell = document.createElement('td');
+      modelCell.textContent = p.lastModelUsed || '-';
+      tr.appendChild(modelCell);
+
+      const actionCell = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = 'Run now';
+      btn.addEventListener('click', () => window.runPipeline(p.pipelineId));
+      actionCell.appendChild(btn);
+      tr.appendChild(actionCell);
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    els.statusTable.appendChild(table);
   }
 
   window.runPipeline = async function(id) {

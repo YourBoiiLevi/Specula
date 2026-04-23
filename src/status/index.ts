@@ -13,7 +13,8 @@ export function mergeStatus(
   const current = statuses.get(pipelineId) ?? { pipelineId, lastRunStatus: 'idle' as const };
   const next: PipelineRunStatus = { ...current, ...partial, pipelineId };
   statuses.set(pipelineId, next);
-  return next;
+  // Return a shallow copy so callers can't mutate the stored entry.
+  return { ...next };
 }
 
 export function getStatus(pipelineId: string): PipelineRunStatus | undefined {

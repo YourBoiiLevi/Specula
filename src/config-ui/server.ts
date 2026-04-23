@@ -35,45 +35,47 @@ export function createConfigUiServer(opts: CreateConfigUiServerOpts): ConfigUiSe
 
   if (opts.auth) {
     const { user: expectedUser, pass: expectedPass } = opts.auth;
+    const expectedUserBuf = Buffer.from(expectedUser, 'utf8');
+    const expectedPassBuf = Buffer.from(expectedPass, 'utf8');
+
+    const unauthorized = (res: Response) => {
+      res.set('WWW-Authenticate', 'Basic realm="Specula Config", charset="UTF-8"');
+      res.status(401).send('Unauthorized');
+    };
+
+    // Constant-time equality over two Buffers of possibly different length.
+    // Always runs timingSafeEqual against an equal-length padded buffer to avoid
+    // early-exit timing, then also requires raw lengths to match.
+    const safeEqual = (a: Buffer, b: Buffer): boolean => {
+      const len = Math.max(a.length, b.length);
+      const ap = Buffer.alloc(len, 0);
+      const bp = Buffer.alloc(len, 0);
+      a.copy(ap);
+      b.copy(bp);
+      const equalPadded = timingSafeEqual(ap, bp);
+      return equalPadded && a.length === b.length;
+    };
+
     app.use((req, res, next) => {
       const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Basic ')) {
-        res.set('WWW-Authenticate', 'Basic realm="Specula Config", charset="UTF-8"');
-        res.status(401).send('Unauthorized');
-        return;
-      }
+      if (!authHeader || !authHeader.startsWith('Basic ')) return unauthorized(res);
 
       const b64auth = authHeader.split(' ')[1];
-      if (!b64auth) {
-        res.set('WWW-Authenticate', 'Basic realm="Specula Config", charset="UTF-8"');
-        res.status(401).send('Unauthorized');
-        return;
-      }
+      if (!b64auth) return unauthorized(res);
 
-      const [user, pass] = Buffer.from(b64auth, 'base64').toString().split(':');
-      if (user === undefined || pass === undefined) {
-        res.set('WWW-Authenticate', 'Basic realm="Specula Config", charset="UTF-8"');
-        res.status(401).send('Unauthorized');
-        return;
-      }
+      const decoded = Buffer.from(b64auth, 'base64').toString('utf8');
+      const sepIdx = decoded.indexOf(':');
+      if (sepIdx < 0) return unauthorized(res);
 
-      const maxUserLen = Math.max(user.length, expectedUser.length);
-      const maxPassLen = Math.max(pass.length, expectedPass.length);
+      // Split on the FIRST colon only so passwords containing ':' work.
+      const user = decoded.slice(0, sepIdx);
+      const pass = decoded.slice(sepIdx + 1);
 
-      const userBuf = Buffer.from(user.padEnd(maxUserLen, '\0'));
-      const expectedUserBuf = Buffer.from(expectedUser.padEnd(maxUserLen, '\0'));
-      const passBuf = Buffer.from(pass.padEnd(maxPassLen, '\0'));
-      const expectedPassBuf = Buffer.from(expectedPass.padEnd(maxPassLen, '\0'));
+      const userMatch = safeEqual(Buffer.from(user, 'utf8'), expectedUserBuf);
+      const passMatch = safeEqual(Buffer.from(pass, 'utf8'), expectedPassBuf);
 
-      const userMatch = timingSafeEqual(userBuf, expectedUserBuf) && user.length === expectedUser.length;
-      const passMatch = timingSafeEqual(passBuf, expectedPassBuf) && pass.length === expectedPass.length;
-
-      if (userMatch && passMatch) {
-        next();
-      } else {
-        res.set('WWW-Authenticate', 'Basic realm="Specula Config", charset="UTF-8"');
-        res.status(401).send('Unauthorized');
-      }
+      if (userMatch && passMatch) return next();
+      return unauthorized(res);
     });
   }
 

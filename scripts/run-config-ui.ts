@@ -17,7 +17,17 @@ const server = createConfigUiServer({
   configPath: CONFIG_PATH,
   loadConfig,
   saveConfig,
-  listStatus: () => listStatus(cfg.pipelines.map((p) => p.id)),
+  // Re-read the config every tick so pipelines added/removed via the editor
+  // are reflected in the status panel without a server restart.
+  listStatus: () => {
+    try {
+      return listStatus(loadConfig().pipelines.map((p) => p.id));
+    } catch {
+      // Config went invalid between writes (e.g. mid-edit). Fall back to whatever
+      // the status store has, rather than 500-ing the status panel.
+      return listStatus();
+    }
+  },
   runPipeline: async (id) => {
     console.log(`[run-config-ui] runPipeline(${id}) invoked — scheduler not wired yet (Phase 5)`);
   },
