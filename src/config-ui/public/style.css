@@ -1,0 +1,266 @@
+:root {
+  --bg: #0a0a0a;
+  --bg-elev: #111;
+  --bg-code: #151515;
+  --fg: #e8e8e8;
+  --fg-dim: #9a9a9a;
+  --fg-muted: #6a6a6a;
+  --accent: #7c5cff;
+  --accent-2: #3ddc97;
+  --border: #232323;
+  --border-strong: #333;
+  --hl-bg: #1a1a2a;
+  --danger: #ff6b6b;
+  --success: #3ddc97;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Geist', sans-serif;
+  line-height: 1.5;
+  padding-bottom: 100px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+}
+
+.brand {
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.brand span {
+  color: var(--fg-dim);
+  font-weight: 400;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h2 {
+  font-family: 'Geist Mono', monospace;
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+label {
+  display: block;
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--fg-dim);
+  margin-bottom: 0.25rem;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="password"],
+select,
+textarea {
+  width: 100%;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 0.5rem;
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+button {
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  padding: 0.5rem 1rem;
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+button.danger:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.pipeline-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.pipeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.pipeline-id {
+  font-family: 'Geist Mono', monospace;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.feed-group-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: flex-start;
+}
+
+.feed-group-row > div {
+  flex: 1;
+}
+
+.feed-group-row button {
+  margin-top: 1.5rem;
+}
+
+#save-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+
+#validation-banner {
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  max-width: 70%;
+}
+
+#validation-banner.valid {
+  background: rgba(61, 220, 151, 0.1);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+#validation-banner.invalid {
+  background: rgba(255, 107, 107, 0.1);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+#save-button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}
+
+#save-button:disabled {
+  background: var(--border-strong);
+  color: var(--fg-muted);
+  cursor: not-allowed;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.85rem;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--fg-dim);
+  font-weight: 500;
+}
+
+.status-chip {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.status-idle { background: var(--border-strong); color: var(--fg); }
+.status-running { background: rgba(124, 92, 255, 0.2); color: var(--accent); }
+.status-success { background: rgba(61, 220, 151, 0.2); color: var(--success); }
+.status-error { background: rgba(255, 107, 107, 0.2); color: var(--danger); }
+
+.error-text {
+  color: var(--danger);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+details {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+summary {
+  cursor: pointer;
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.9rem;
+  color: var(--fg-dim);
+}
