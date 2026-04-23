@@ -145,4 +145,45 @@ describe('generate', () => {
     // Sanity check: the copy should be the real Fuse.js library, not the fallback stub.
     expect(fuseJs).toContain('Fuse');
   });
+
+  it('defaults to config.siteRepoPath when outDir is omitted', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'specula-ssg-default-out-'));
+    const config = { ...mockConfig, siteRepoPath: tmpDir };
+
+    const result = await generate(config, { reports: mockReports });
+
+    expect(result.outDir).toBe(tmpDir);
+    await expect(fs.readFile(path.join(tmpDir, 'index.html'), 'utf-8')).resolves.toContain('Test Feed');
+  });
+
+  it('cleans managed output so stale report and archive pages are removed', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'specula-ssg-clean-'));
+    const config = { ...mockConfig, siteRepoPath: tmpDir };
+    const firstRunReports: Report[] = Array.from({ length: 31 }, (_, index) => ({
+      id: `p1-2026-04-23-${String(index).padStart(2, '0')}-00`,
+      pipelineId: 'p1',
+      pipelineLabel: 'Pipeline 1',
+      generatedAt: `2026-04-23T${String((index + 1) % 24).padStart(2, '0')}:00:00Z`,
+      body: `Report ${index + 1}`,
+      sources: [],
+      itemCount: 0,
+      modelUsed: 'test',
+      wordCount: 0,
+    }));
+    const keptReport = firstRunReports[0]!;
+    const staleReport = firstRunReports[firstRunReports.length - 1]!;
+
+    await generate(config, { reports: firstRunReports });
+
+    await expect(fs.access(path.join(tmpDir, 'reports', `${keptReport.id}.html`))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(tmpDir, 'reports', `${staleReport.id}.html`))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(tmpDir, 'pipelines', 'p1-2.html'))).resolves.toBeUndefined();
+
+    const secondRunReports = [keptReport];
+    await generate(config, { reports: secondRunReports });
+
+    await expect(fs.access(path.join(tmpDir, 'reports', `${keptReport.id}.html`))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(tmpDir, 'reports', `${staleReport.id}.html`))).rejects.toThrow();
+    await expect(fs.access(path.join(tmpDir, 'pipelines', 'p1-2.html'))).rejects.toThrow();
+  });
 });

@@ -26,13 +26,33 @@ export interface GenerateResult {
   durationMs: number;
 }
 
+const MANAGED_PATHS = [
+  'reports',
+  'pipelines',
+  'assets',
+  'index.html',
+  'timeline.html',
+  'feed.xml',
+  'search-index.json',
+  'search-docs.json',
+] as const;
+
+async function cleanManagedOutput(outDir: string): Promise<void> {
+  await Promise.all(
+    MANAGED_PATHS.map((managedPath) =>
+      fs.rm(path.join(outDir, managedPath), { recursive: true, force: true }),
+    ),
+  );
+}
+
 export async function generate(
   config: SpeculaConfig,
   options?: GenerateOptions,
 ): Promise<GenerateResult> {
   const start = Date.now();
-  const outDir = path.resolve(options?.outDir ?? './site');
+  const outDir = path.resolve(options?.outDir ?? config.siteRepoPath);
   
+  await cleanManagedOutput(outDir);
   await fs.mkdir(outDir, { recursive: true });
   await fs.mkdir(path.join(outDir, 'reports'), { recursive: true });
   await fs.mkdir(path.join(outDir, 'pipelines'), { recursive: true });

@@ -45,6 +45,8 @@ export function renderReportBody(markdown: string): RenderedReportBody {
     return baseCode(token);
   };
 
+  renderer.html = (token) => escapeAttr(token.text);
+
   const markedInstance = new Marked({ gfm: true, breaks: false, renderer });
   const html = markedInstance.parse(markdown) as string;
   const excerpt = plainTextExcerpt(markdown, 300);
