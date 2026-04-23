@@ -213,4 +213,59 @@ describe('seen-state helpers', () => {
     // Original state should be untouched.
     expect(state.ids).toEqual({});
   });
+
+  describe('path safety', () => {
+    it('reportDir rejects pipelineIds containing path separators', () => {
+      expect(() => reportDir('../etc')).toThrow(/Unsafe path segment/);
+      expect(() => reportDir('a/b')).toThrow(/Unsafe path segment/);
+      expect(() => reportDir('..')).toThrow(/Unsafe path segment/);
+      expect(() => reportDir('.')).toThrow(/Unsafe path segment/);
+      expect(() => reportDir('')).toThrow(/Unsafe path segment/);
+    });
+
+    it('seenPath rejects unsafe pipelineIds', () => {
+      expect(() => seenPath('../../secret')).toThrow(/Unsafe path segment/);
+      expect(() => seenPath('..')).toThrow(/Unsafe path segment/);
+    });
+
+    it('reportDir accepts slug-like ids', () => {
+      expect(() => reportDir('news')).not.toThrow();
+      expect(() => reportDir('ai-research')).not.toThrow();
+      expect(() => reportDir('pipeline-42')).not.toThrow();
+    });
+
+    it('saveReport rejects a report whose id contains path traversal after the prefix', async () => {
+      const bad: Report = {
+        id: 'news-../escape',
+        pipelineId: 'news',
+        pipelineLabel: 'News',
+        generatedAt: '2026-04-23T12:00:00.000Z',
+        itemCount: 0,
+        modelUsed: 'test',
+        sources: [],
+        body: '',
+        wordCount: 0,
+      };
+      await expect(saveReport(bad)).rejects.toThrow(/Unsafe path segment/);
+    });
+  });
+
+  describe('filterUnseen prototype-key safety', () => {
+    it('does not treat inherited Object prototype keys as seen', () => {
+      const state: SeenState = { ids: {} };
+      const items: FeedItem[] = (['toString', 'hasOwnProperty', '__proto__'] as const).map(
+        (id) => ({
+          id,
+          title: id,
+          link: `https://example.com/${id}`,
+          content: '',
+          publishedAt: new Date('2026-04-23T12:00:00Z'),
+          source: 's',
+          sourceUrl: 'https://example.com',
+        }),
+      );
+      const out = filterUnseen(items, state);
+      expect(out.map((i) => i.id)).toEqual(['toString', 'hasOwnProperty', '__proto__']);
+    });
+  });
 });

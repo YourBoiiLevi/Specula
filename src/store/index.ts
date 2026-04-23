@@ -8,12 +8,54 @@ export function getDataDir(): string {
   return './data';
 }
 
+/**
+ * Path segments that are allowed to appear in filesystem paths derived from
+ * caller-supplied identifiers (pipeline id, timestamp slug). Matches the
+ * pipeline/feed-group id grammar in config.ts (slug) plus `.` for extensions
+ * and timestamps like `2026-04-23-12-00`.
+ */
+const SAFE_SEGMENT_REGEX = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+function assertSafeSegment(segment: string, label: string): void {
+  if (
+    !segment ||
+    segment === '.' ||
+    segment === '..' ||
+    !SAFE_SEGMENT_REGEX.test(segment)
+  ) {
+    throw new Error(
+      `[store] Unsafe path segment for ${label}: ${JSON.stringify(segment)}. Must match /^[A-Za-z0-9][A-Za-z0-9._-]*$/ and not be "." or "..".`,
+    );
+  }
+}
+
+/**
+ * Defense-in-depth: after resolving a path, verify it is rooted within the
+ * configured data dir. Guards against any edge case the segment regex misses
+ * (symlinks, exotic unicode collisions, future refactors).
+ */
+function assertWithinDataDir(resolved: string): void {
+  const base = path.resolve(getDataDir());
+  const rel = path.relative(base, resolved);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error(
+      `[store] Resolved path escapes data dir: ${resolved} (base: ${base}).`,
+    );
+  }
+}
+
 export function reportDir(pipelineId: string): string {
-  return path.join(getDataDir(), 'reports', pipelineId);
+  assertSafeSegment(pipelineId, 'pipelineId');
+  const resolved = path.resolve(getDataDir(), 'reports', pipelineId);
+  assertWithinDataDir(resolved);
+  return resolved;
 }
 
 export function seenPath(pipelineId: string): string {
-  return path.join(getDataDir(), 'seen', `${pipelineId}.json`);
+  assertSafeSegment(pipelineId, 'pipelineId');
+  const resolved = path.resolve(getDataDir(), 'seen', `${pipelineId}.json`);
+  assertWithinDataDir(resolved);
+  return resolved;
 }
 
 function stripPipelinePrefix(report: Report): string {
@@ -27,10 +69,12 @@ function stripPipelinePrefix(report: Report): string {
 }
 
 export async function saveReport(report: Report): Promise<string> {
-  const dir = path.resolve(reportDir(report.pipelineId));
+  const dir = reportDir(report.pipelineId);
   await fs.mkdir(dir, { recursive: true });
   const timestamp = stripPipelinePrefix(report);
+  assertSafeSegment(timestamp, 'report timestamp');
   const file = path.join(dir, `${timestamp}.json`);
+  assertWithinDataDir(file);
   await fs.writeFile(file, JSON.stringify(report, null, 2), 'utf8');
   return file;
 }
@@ -169,7 +213,7 @@ export function pruneSeen(state: SeenState, windowHours: number, now?: Date): Se
 }
 
 export function filterUnseen(items: FeedItem[], state: SeenState): FeedItem[] {
-  return items.filter((item) => !(item.id in state.ids));
+  return items.filter((item) => !Object.hasOwn(state.ids, item.id));
 }
 
 export function markSeen(state: SeenState, items: FeedItem[], now?: Date): SeenState {
