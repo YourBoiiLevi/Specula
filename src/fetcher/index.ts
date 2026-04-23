@@ -17,6 +17,21 @@ interface ResolvedOptions {
   fetchImpl: typeof fetch;
 }
 
+async function releaseResponseBody(response: Response): Promise<void> {
+  if (response.body == null || response.bodyUsed) return;
+  try {
+    await response.body.cancel();
+    return;
+  } catch {
+    // Fall back to draining the body when cancellation is unavailable.
+  }
+  try {
+    await response.arrayBuffer();
+  } catch {
+    // Best-effort cleanup only; preserve the original HTTP error.
+  }
+}
+
 export async function fetchFeeds(
   groups: FeedGroup[],
   options?: FetchOptions,
@@ -41,6 +56,7 @@ async function fetchOne(group: FeedGroup, cfg: ResolvedOptions): Promise<FeedFet
       signal: controller.signal,
     });
     if (!response.ok) {
+      await releaseResponseBody(response);
       const error = `HTTP ${response.status}`;
       console.error(`[fetcher] ${group.id}: ${error}`);
       return { group, xml: null, error };
