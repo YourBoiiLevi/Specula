@@ -40,6 +40,59 @@ function getText(node: unknown): string {
   return '';
 }
 
+const XHTML_ATTRIBUTE_KEYS = new Set([
+  'alt',
+  'aria-hidden',
+  'aria-label',
+  'class',
+  'dir',
+  'height',
+  'href',
+  'id',
+  'lang',
+  'media',
+  'rel',
+  'role',
+  'src',
+  'style',
+  'target',
+  'title',
+  'type',
+  'width',
+  'xml:base',
+  'xml:lang',
+  'xmlns',
+]);
+
+function flattenXhtmlText(node: unknown): string {
+  if (node == null) return '';
+  if (typeof node === 'string' || typeof node === 'number' || typeof node === 'boolean') {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map((child) => flattenXhtmlText(child)).filter(Boolean).join(' ');
+  }
+  if (!isRecord(node)) return '';
+
+  const parts: string[] = [];
+  const cdata = node['__cdata'];
+  if (typeof cdata === 'string') parts.push(cdata);
+  const text = node['#text'];
+  if (typeof text === 'string' || typeof text === 'number' || typeof text === 'boolean') {
+    parts.push(String(text));
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    if (key === '__cdata' || key === '#text' || XHTML_ATTRIBUTE_KEYS.has(key)) {
+      continue;
+    }
+    const childText = flattenXhtmlText(value);
+    if (childText) parts.push(childText);
+  }
+
+  return parts.join(' ');
+}
+
 const ENTITY_MAP: Record<string, string> = {
   '&amp;': '&',
   '&lt;': '<',
@@ -66,14 +119,21 @@ export function parseFeedDate(raw: string): Date | null {
   return d;
 }
 
-function hashId(title: string, isoPub: string): string {
-  return createHash('sha1').update(`${title}|${isoPub}`).digest('hex');
+function hashId(...parts: string[]): string {
+  return createHash('sha1').update(parts.join('|')).digest('hex');
 }
 
-function chooseId(primary: string, fallback: string, title: string, isoPub: string): string {
+function chooseId(
+  primary: string,
+  fallback: string,
+  title: string,
+  stableDate: string,
+  content: string,
+  sourceUrl: string,
+): string {
   if (primary) return primary;
   if (fallback) return fallback;
-  return hashId(title, isoPub);
+  return hashId(title, stableDate, content, sourceUrl);
 }
 
 function getRssLink(item: UnknownRecord): string {
@@ -123,6 +183,8 @@ function getAtomContent(entry: UnknownRecord): string {
     if (typeof cdata === 'string') return cdata;
     const text = c['#text'];
     if (typeof text === 'string') return text;
+    const xhtml = flattenXhtmlText(c);
+    if (xhtml) return xhtml;
   }
   return getText(entry['summary']);
 }
@@ -139,11 +201,12 @@ function normalizeRssItem(item: UnknownRecord, group: FeedGroup): FeedItem {
   const title = getText(item['title']);
   const link = getRssLink(item);
   const rawDate = getRssDate(item);
-  const publishedAt = parseFeedDate(rawDate) ?? new Date();
-  const isoPub = publishedAt.toISOString();
+  const parsedPublishedAt = parseFeedDate(rawDate);
   const guid = getRssGuid(item);
-  const id = chooseId(guid, link, title, isoPub);
   const content = stripHtml(getRssContent(item));
+  const stableDate = parsedPublishedAt?.toISOString() ?? rawDate;
+  const id = chooseId(guid, link, title, stableDate, content, group.url);
+  const publishedAt = parsedPublishedAt ?? new Date();
   return {
     id,
     title,
@@ -159,11 +222,12 @@ function normalizeAtomEntry(entry: UnknownRecord, group: FeedGroup): FeedItem {
   const title = getText(entry['title']);
   const link = getAtomLink(entry);
   const rawDate = getAtomDate(entry);
-  const publishedAt = parseFeedDate(rawDate) ?? new Date();
-  const isoPub = publishedAt.toISOString();
+  const parsedPublishedAt = parseFeedDate(rawDate);
   const atomId = getText(entry['id']);
-  const id = chooseId(atomId, link, title, isoPub);
   const content = stripHtml(getAtomContent(entry));
+  const stableDate = parsedPublishedAt?.toISOString() ?? rawDate;
+  const id = chooseId(atomId, link, title, stableDate, content, group.url);
+  const publishedAt = parsedPublishedAt ?? new Date();
   return {
     id,
     title,

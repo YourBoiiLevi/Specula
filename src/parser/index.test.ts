@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,6 +29,10 @@ function rssResult(): FeedFetchResult {
 
 function atomResult(): FeedFetchResult {
   return { group: atomGroup, xml: loadFixture('atom-sample.xml') };
+}
+
+function atomXhtmlResult(): FeedFetchResult {
+  return { group: atomGroup, xml: loadFixture('atom-xhtml-sample.xml') };
 }
 
 describe('parseFeed (RSS)', () => {
@@ -108,6 +112,41 @@ describe('parseFeed (Atom)', () => {
   it('parses published date', () => {
     expect(entries[0]?.publishedAt.toISOString()).toBe('2026-04-23T08:00:00.000Z');
     expect(entries[1]?.publishedAt.toISOString()).toBe('2026-04-22T15:30:00.000Z');
+  });
+
+  it('extracts XHTML content when Atom content is parsed as nested objects', () => {
+    const [entry] = parseFeed(atomXhtmlResult());
+    expect(entry?.content).toBe('Alpha paragraph. Beta paragraph. List one List two');
+  });
+
+  it('keeps fallback ids deterministic for undated items', () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Undated Feed</title>
+  <entry>
+    <title>Undated Entry</title>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p>Stable body text.</p>
+      </div>
+    </content>
+  </entry>
+</feed>`;
+
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-04-23T00:00:00.000Z'));
+      const [first] = parseFeed({ group: atomGroup, xml });
+
+      vi.setSystemTime(new Date('2026-04-24T00:00:00.000Z'));
+      const [second] = parseFeed({ group: atomGroup, xml });
+
+      expect(first?.id).toBe(second?.id);
+      expect(first?.publishedAt.toISOString()).toBe('2026-04-23T00:00:00.000Z');
+      expect(second?.publishedAt.toISOString()).toBe('2026-04-24T00:00:00.000Z');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

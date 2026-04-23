@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { FeedGroup } from '../types.js';
 import { fetchFeeds } from './index.js';
 
@@ -46,6 +46,23 @@ describe('fetchFeeds', () => {
     expect(byId.get('feed-2')?.error).toBe('HTTP 500');
     expect(byId.get('feed-3')?.xml).toBe('<rss/>');
     expect(byId.get('feed-3')?.error).toBeUndefined();
+  });
+
+  it('releases non-OK response bodies before returning', async () => {
+    const cancel = vi.fn<() => Promise<void>>().mockResolvedValue();
+    const fetchImpl: FetchFn = async () =>
+      ({
+        ok: false,
+        status: 503,
+        bodyUsed: false,
+        body: { cancel } as unknown as ReadableStream<Uint8Array>,
+      }) as Response;
+
+    const [result] = await fetchFeeds(groups(1), { fetchImpl });
+
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(result?.xml).toBeNull();
+    expect(result?.error).toBe('HTTP 503');
   });
 
   it('aborts and reports timeout when the fetch never resolves', async () => {
