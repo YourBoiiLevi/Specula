@@ -54,6 +54,20 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('Prioritize safety-research outlets.');
   });
 
+  it('treats replacement-like sequences literally in pipeline values', () => {
+    const prompt = buildSystemPrompt(
+      makePipeline({
+        label: 'AI $& $$ $1 Research',
+        description: 'Track $& and $$ and $1 exactly',
+        focusInstructions: 'Repeat $& $$ $1 verbatim',
+      }),
+      2,
+    );
+    expect(prompt).toContain('from AI $& $$ $1 Research sources');
+    expect(prompt).toContain('covering: Track $& and $$ and $1 exactly');
+    expect(prompt).toContain('Repeat $& $$ $1 verbatim');
+  });
+
   it('preserves the literal fenced-html and fenced-iframe rich-media instructions', () => {
     const prompt = buildSystemPrompt(makePipeline(), 3);
     expect(prompt).toContain('```html');
@@ -75,5 +89,14 @@ describe('buildUserPrompt', () => {
     expect(prompt).not.toContain('{nowIso}');
     expect(prompt).not.toContain('{N}');
     expect(prompt).not.toContain('{pipeline.label}');
+  });
+
+  it('treats replacement-like sequences literally in the user prompt', () => {
+    const prompt = buildUserPrompt(
+      makePipeline({ label: 'AI $& $$ $1 Research' }),
+      12,
+      '2026-04-23T12:34:56.000Z',
+    );
+    expect(prompt).toContain('for the AI $& $$ $1 Research pipeline');
   });
 });

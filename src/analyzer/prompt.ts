@@ -50,20 +50,30 @@ Additional focus for this pipeline:
 const USER_TEMPLATE = `It is {nowIso} UTC. Analyze the {N} feed items in the filesystem
 and write your briefing for the {pipeline.label} pipeline.`;
 
+function fillTemplate(template: string, values: Record<string, string>): string {
+  return template.replace(/\{[^}]+\}/g, (placeholder) => values[placeholder] ?? placeholder);
+}
+
 export function buildSystemPrompt(pipeline: Pipeline, itemCount: number): string {
-  let prompt = SYSTEM_TEMPLATE.replace(/\{N\}/g, String(itemCount))
-    .replace(/\{pipeline\.label\}/g, pipeline.label)
-    .replace(/\{pipeline\.description\}/g, pipeline.description);
+  let prompt = fillTemplate(SYSTEM_TEMPLATE, {
+    '{N}': String(itemCount),
+    '{pipeline.label}': pipeline.label,
+    '{pipeline.description}': pipeline.description,
+  });
 
   const focus = pipeline.focusInstructions?.trim() ?? '';
   if (focus.length > 0) {
-    prompt += FOCUS_BLOCK.replace('{pipeline.focusInstructions}', pipeline.focusInstructions ?? '');
+    prompt += fillTemplate(FOCUS_BLOCK, {
+      '{pipeline.focusInstructions}': pipeline.focusInstructions ?? '',
+    });
   }
   return prompt;
 }
 
 export function buildUserPrompt(pipeline: Pipeline, itemCount: number, nowIso: string): string {
-  return USER_TEMPLATE.replace('{nowIso}', nowIso)
-    .replace(/\{N\}/g, String(itemCount))
-    .replace(/\{pipeline\.label\}/g, pipeline.label);
+  return fillTemplate(USER_TEMPLATE, {
+    '{nowIso}': nowIso,
+    '{N}': String(itemCount),
+    '{pipeline.label}': pipeline.label,
+  });
 }
