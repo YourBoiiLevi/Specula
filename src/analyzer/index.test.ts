@@ -101,15 +101,17 @@ describe('buildVfsFiles', () => {
     expect(index).not.toContain(' A | B | C |');
   });
 
-  it('sanitizes unsafe id characters to underscores in the vfs path', () => {
+  it('percent-encodes unsafe id characters in the vfs path without collisions', () => {
     const items: FeedItem[] = [
       makeItem({ id: 'https://example.com/a?b=c&d=e' }),
+      makeItem({ id: 'https___example.com_a_b_c_d_e' }),
     ];
     const files = buildVfsFiles(items);
-    const keys = Object.keys(files).filter((k) => k.startsWith('/feeds/'));
-    expect(keys).toHaveLength(1);
-    // Colons, slashes, ?, =, & should all be replaced with _.
-    expect(keys[0]).toBe('/feeds/https___example.com_a_b_c_d_e.md');
+    const keys = Object.keys(files).filter((k) => k.startsWith('/feeds/')).sort();
+    expect(keys).toEqual([
+      '/feeds/https%3A%2F%2Fexample.com%2Fa%3Fb%3Dc%26d%3De.md',
+      '/feeds/https___example.com_a_b_c_d_e.md',
+    ]);
   });
 });
 

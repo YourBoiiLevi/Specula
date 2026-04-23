@@ -32,10 +32,9 @@ export interface AnalyzerDeps {
   google?: (modelId: string) => LanguageModel;
 }
 
-const FILENAME_SAFE = /[^A-Za-z0-9._-]/g;
-
-function sanitizeId(id: string): string {
-  return id.replace(FILENAME_SAFE, '_');
+function encodeIdForPath(id: string): string {
+  const encoded = encodeURIComponent(id);
+  return encoded.length > 0 ? encoded : 'item';
 }
 
 function escapePipe(text: string): string {
@@ -47,8 +46,8 @@ export function buildVfsFiles(items: FeedItem[]): Record<string, string> {
   const files: Record<string, string> = {};
   const rows: string[] = [];
   for (const item of items) {
-    const safeId = sanitizeId(item.id);
-    const filePath = `/feeds/${safeId}.md`;
+    const encodedId = encodeIdForPath(item.id);
+    const filePath = `/feeds/${encodedId}.md`;
     files[filePath] = itemToMarkdown(item);
     rows.push(
       `| ${filePath} | ${escapePipe(item.title)} | ${escapePipe(item.source)} | ${item.publishedAt.toISOString()} |`,
