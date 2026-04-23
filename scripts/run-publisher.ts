@@ -15,4 +15,8 @@ console.log(
     2,
   ),
 );
-if (!result.ok) process.exit(1);
+if (!result.ok) {
+  // Use exitCode (not exit()) so the event loop drains stdout first, otherwise
+  // the JSON result above can be truncated on abrupt termination.
+  process.exitCode = 1;
+}

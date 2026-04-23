@@ -123,10 +123,13 @@ export async function publish(
   const generate = deps?.generate ?? defaultGenerate;
   const logChunks: string[] = [];
 
-  // 1. Build the site into a staging dir.
+  // 1. Build the site into a staging dir. Wipe it first so stale files from a
+  //    previous run (e.g. a report that has since rotated out of the archive)
+  //    don't linger and get synced into siteRepoPath.
   console.log(`[publisher] generating site → ${buildDir}`);
   let ssg: GenerateResult;
   try {
+    await fs.rm(buildDir, { recursive: true, force: true });
     ssg = await generate(config, { outDir: buildDir });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -162,10 +165,16 @@ export async function publish(
   console.log(`[publisher] syncing to ${siteRepoPath}`);
   try {
     await wipeDestination(siteRepoPath);
+    const normalizedBuildDir = path.resolve(buildDir);
     await fs.cp(buildDir, siteRepoPath, {
       recursive: true,
       force: true,
-      filter: (src) => !src.includes('/.git') && !src.includes('\\.git'),
+      // Only skip a top-level `.git` directory under buildDir. The previous
+      // substring check also matched `.gitignore`, `.gitattributes`, etc.
+      filter: (src) => {
+        const rel = path.relative(normalizedBuildDir, src);
+        return rel !== '.git' && !rel.startsWith('.git' + path.sep);
+      },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
