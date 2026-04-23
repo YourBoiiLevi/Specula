@@ -366,10 +366,12 @@ document.addEventListener('DOMContentLoaded', () => {
       isLoading = true;
       try {
         const root = searchInput.getAttribute('data-root') || './';
-        const [indexRes, docsRes] = await Promise.all([
+        const [fuseMod, indexRes, docsRes] = await Promise.all([
+          import(root + 'assets/fuse.min.mjs'),
           fetch(root + 'search-index.json'),
           fetch(root + 'search-docs.json')
         ]);
+        const Fuse = fuseMod.default;
         
         if (!indexRes.ok || !docsRes.ok) throw new Error('Failed to load search data');
         
@@ -491,16 +493,23 @@ document.addEventListener('DOMContentLoaded', () => {
 export async function copyFuseJs(destPath: string): Promise<void> {
   const require = createRequire(import.meta.url);
   try {
-    const src = require.resolve('fuse.js/dist/fuse.min.js');
+    // Fuse.js v7 exposes the minified ESM build at the `./min` subpath.
+    const src = require.resolve('fuse.js/min');
     await fs.copyFile(src, destPath);
   } catch (err) {
     try {
-      const src = require.resolve('fuse.js/dist/fuse.common.js');
+      // Fallback: resolve the main export (non-minified ESM) if the `./min`
+      // subpath isn't available in this Fuse version.
+      const src = require.resolve('fuse.js');
       await fs.copyFile(src, destPath);
     } catch (err2) {
       console.error('Failed to copy fuse.js:', err2);
       // Create a dummy file so the test passes and the script tag doesn't 404
-      await fs.writeFile(destPath, '/* fuse.js not found */', 'utf-8');
+      await fs.writeFile(
+        destPath,
+        '// fuse.js not found — client search will be disabled\nexport default null;\n',
+        'utf-8',
+      );
     }
   }
 }

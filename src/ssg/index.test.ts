@@ -140,7 +140,9 @@ describe('generate', () => {
     const appJs = await fs.readFile(path.join(tmpDir, 'assets', 'app.js'), 'utf-8');
     expect(appJs).toContain('document.addEventListener');
     
-    const fuseJs = await fs.readFile(path.join(tmpDir, 'assets', 'fuse.min.js'), 'utf-8');
+    const fuseJs = await fs.readFile(path.join(tmpDir, 'assets', 'fuse.min.mjs'), 'utf-8');
     expect(fuseJs.length).toBeGreaterThan(0);
+    // Sanity check: the copy should be the real Fuse.js library, not the fallback stub.
+    expect(fuseJs).toContain('Fuse');
   });
 });

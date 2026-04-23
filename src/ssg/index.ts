@@ -46,7 +46,7 @@ export async function generate(
   // Write assets
   await fs.writeFile(path.join(outDir, 'assets', 'style.css'), STYLE_CSS, 'utf-8');
   await fs.writeFile(path.join(outDir, 'assets', 'app.js'), APP_JS, 'utf-8');
-  await copyFuseJs(path.join(outDir, 'assets', 'fuse.min.js'));
+  await copyFuseJs(path.join(outDir, 'assets', 'fuse.min.mjs'));
   
   let pageCount = 0;
   

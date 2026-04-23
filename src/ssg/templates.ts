@@ -1,5 +1,6 @@
 import type { Report, SpeculaConfig } from '../types.js';
 import type { SearchDoc } from './search.js';
+import { plainTextExcerpt } from './render.js';
 
 export interface LayoutContext {
   config: SpeculaConfig;
@@ -33,7 +34,6 @@ export function renderLayout(ctx: LayoutContext, bodyHtml: string): string {
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="${root}assets/style.css">
   <link rel="alternate" type="application/atom+xml" title="${esc(config.feedTitle)}" href="${root}feed.xml">
-  <script src="${root}assets/fuse.min.js" defer></script>
   <script src="${root}assets/app.js" defer></script>
 </head>
 <body>
@@ -93,7 +93,7 @@ export function renderIndex(config: SpeculaConfig, latestByPipeline: Map<string,
           <a href="./reports/${esc(r.id)}.html" class="report-row">
             <div class="report-meta">${esc(dateStr)} UTC</div>
             <div class="report-title">${esc(r.pipelineLabel)} — ${esc(dateStr)}</div>
-            <div class="report-excerpt">${esc(r.body.substring(0, 100))}...</div>
+            <div class="report-excerpt">${esc(plainTextExcerpt(r.body, 140))}</div>
           </a>
         `;
       });
@@ -135,7 +135,7 @@ export function renderTimeline(config: SpeculaConfig, reports: Report[]): string
       <a href="./reports/${esc(r.id)}.html" class="report-row">
         <div class="report-meta">${esc(hh)}:${esc(min)} UTC <span class="chip">${esc(r.pipelineLabel)}</span></div>
         <div class="report-title">${esc(r.pipelineLabel)} — ${esc(dateStr)} ${esc(hh)}:${esc(min)}</div>
-        <div class="report-excerpt">${esc(r.body.substring(0, 100))}...</div>
+        <div class="report-excerpt">${esc(plainTextExcerpt(r.body, 140))}</div>
       </a>
     `;
   });
@@ -216,7 +216,7 @@ export function renderPipelineArchive(
       <a href="../reports/${esc(r.id)}.html" class="report-row">
         <div class="report-meta">${esc(dateStr)} UTC</div>
         <div class="report-title">${esc(r.pipelineLabel)} — ${esc(dateStr)}</div>
-        <div class="report-excerpt">${esc(r.body.substring(0, 100))}...</div>
+        <div class="report-excerpt">${esc(plainTextExcerpt(r.body, 140))}</div>
       </a>
     `;
   });
