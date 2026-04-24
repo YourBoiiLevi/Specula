@@ -47,6 +47,8 @@ export interface RunPipelineResult {
   reportId?: string;
   reportPath?: string;
   modelUsed?: string;
+  /** The full Report on success. Populated iff status === 'success'. */
+  report?: Report;
   skippedReason?: string;
   error?: string;
 }
@@ -173,6 +175,7 @@ export async function runPipeline(
       reportId: report.id,
       reportPath,
       modelUsed: analysis.modelUsed,
+      report,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

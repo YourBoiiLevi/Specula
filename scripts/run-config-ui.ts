@@ -29,7 +29,8 @@ const server = createConfigUiServer({
     }
   },
   runPipeline: async (id) => {
-    console.log(`[run-config-ui] runPipeline(${id}) invoked — scheduler not wired yet (Phase 5)`);
+    // Standalone Config UI: no scheduler running. For full boot use `src/index.ts`.
+    console.log(`[run-config-ui] runPipeline(${id}) invoked — standalone UI mode, no scheduler attached`);
   },
   ...(cfg.configUiAuth ? { auth: cfg.configUiAuth } : {}),
 });
